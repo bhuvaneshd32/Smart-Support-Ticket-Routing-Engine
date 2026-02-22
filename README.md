@@ -282,6 +282,3 @@ SMART-SUPPORT-TICKET-ROUTING-ENGINE/
 * Dockerized deployment
 * Config-driven system tuning
 * Fully tested modular architecture
-
-```
-
