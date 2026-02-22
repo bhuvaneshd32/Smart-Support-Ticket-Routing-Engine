@@ -1,0 +1,56 @@
+# docker-compose.yml  ──  Member B owns this file
+# Three services: api, worker, redis
+# Run: docker-compose up --build
+
+version: "3.9"
+
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: smartsupport-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smartsupport-api
+    command: python api_server.py
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    restart: on-failure
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smartsupport-worker
+    command: python worker.py
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    restart: on-failure
+    # Scale to multiple worker instances for concurrency:
+    # docker-compose up --scale worker=3
