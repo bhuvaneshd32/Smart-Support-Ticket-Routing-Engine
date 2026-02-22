@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content="SmartSupport Routing Engine Dashboard for real-time ticket classification and agent routing"/>
+<meta name="theme-color" content="#0a0a0f"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+<title>SmartSupport — Routing Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #1e1e2e;
+    --amber: #f5a623;
+    --green: #00ff88;
+    --red: #ff4757;
+    --blue: #4ecdc4;
+    --muted: #444466;
+    --text: #cccce0;
+    --text-dim: #666688;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* Header */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+  .logo span { color: var(--amber); }
+
+  .status-bar {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .status-dot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: none;
+  }
+  .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  .dot.red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .dot.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: pulse 2s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Main grid */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto 1fr;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 57px);
+  }
+
+  /* Stats row */
+  .stats-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .stat-card {
+    background: var(--surface);
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    line-height: 1;
+  }
+  .stat-value.green { color: var(--green); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.red { color: var(--red); }
+  .stat-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* Panels */
+  .panel {
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-header .tag {
+    background: var(--border);
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-size: 9px;
+  }
+
+  /* Submit form */
+  .form-area {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 14px;
+    resize: vertical;
+    min-height: 100px;
+    outline: none;
+    transition: border-color 0.2s;
+    border-radius: 2px;
+  }
+  textarea:focus { border-color: var(--amber); }
+  textarea::placeholder { color: var(--muted); }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-radius: 2px;
+  }
+
+  .btn-primary {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #000;
+  }
+  .btn-primary:hover { background: #ffc14d; }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+
+  .btn-danger {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .btn-danger:hover { border-color: var(--red); color: var(--red); }
+
+  .btn-storm {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text-dim);
+    grid-column: 1 / -1;
+  }
+  .btn-storm:hover { border-color: #ff6b35; color: #ff6b35; }
+
+  /* Response box */
+  .response-box {
+    margin: 0 20px 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    font-size: 12px;
+    min-height: 48px;
+    color: var(--text-dim);
+    border-radius: 2px;
+    display: none;
+  }
+  .response-box.show { display: block; }
+  .response-box.success { border-color: var(--green); color: var(--green); }
+  .response-box.error { border-color: var(--red); color: var(--red); }
+
+  /* Ticket log */
+  .ticket-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .ticket-item {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    animation: slideIn 0.3s ease;
+    cursor: default;
+    transition: background 0.15s;
+  }
+  .ticket-item:hover { background: rgba(255,255,255,0.02); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .ticket-text {
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ticket-meta {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .badge {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 2px 7px;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+  .badge-billing { background: rgba(78, 205, 196, 0.15); color: var(--blue); border: 1px solid rgba(78,205,196,0.3); }
+  .badge-technical { background: rgba(245, 166, 35, 0.15); color: var(--amber); border: 1px solid rgba(245,166,35,0.3); }
+  .badge-legal { background: rgba(255, 71, 87, 0.15); color: var(--red); border: 1px solid rgba(255,71,87,0.3); }
+  .badge-storm { background: rgba(255, 107, 53, 0.15); color: #ff6b35; border: 1px solid rgba(255,107,53,0.3); }
+
+  .urgency-bar {
+    width: 48px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .urgency-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* Agent grid */
+  .agent-grid {
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  .agent-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: 2px;
+    transition: border-color 0.2s;
+  }
+  .agent-card:hover { border-color: var(--muted); }
+
+  .agent-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .agent-skills {
+    font-size: 9px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+  }
+  .agent-load {
+    margin-top: 8px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .agent-load-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 0.5s;
+  }
+
+  /* Circuit breaker */
+  .circuit-panel {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .circuit-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+  }
+  .circuit-indicator.open { border-color: var(--red); }
+  .circuit-indicator.closed { border-color: var(--green); }
+
+  .circuit-label { font-size: 12px; }
+  .circuit-label strong { color: #fff; }
+  .circuit-label small { display: block; font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+
+  /* Empty state */
+  .empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Full-width bottom row */
+  .bottom-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .time-tag {
+    font-size: 9px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .sending { opacity: 0.6; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Smart<span>Support</span> <span style="color:var(--text-dim);font-size:12px;font-weight:400">/ Routing Engine</span></div>
+  <div class="status-bar">
+    <div class="status-dot">
+      <div class="dot" id="api-dot"></div>
+      <span id="api-status">connecting...</span>
+    </div>
+    <div class="status-dot">
+      <div class="dot" id="worker-dot"></div>
+      <span id="worker-status">worker</span>
+    </div>
+    <div class="status-dot">
+      <div class="dot" id="cb-dot"></div>
+      <span id="cb-status">circuit</span>
+    </div>
+    <span style="color:var(--muted)">|</span>
+    <span id="clock" style="color:var(--text-dim)"></span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Tickets Submitted</div>
+      <div class="stat-value amber" id="stat-submitted">0</div>
+      <div class="stat-sub">this session</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Queue Depth</div>
+      <div class="stat-value" id="stat-queue">0</div>
+      <div class="stat-sub">pending in redis</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Circuit Breaker</div>
+      <div class="stat-value green" id="stat-circuit">CLOSED</div>
+      <div class="stat-sub">ml model status</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Storms Detected</div>
+      <div class="stat-value" id="stat-storms" style="color:#ff6b35">0</div>
+      <div class="stat-sub">master incidents</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Webhooks Fired</div>
+      <div class="stat-value" id="stat-webhooks" style="color:var(--blue)">0</div>
+      <div class="stat-sub">urgency > 0.8</div>
+    </div>
+  </div>
+
+  <!-- Left: Submit Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      Submit Ticket
+      <span class="tag">POST /ticket</span>
+    </div>
+    <div class="form-area">
+      <textarea id="ticket-text" placeholder="Describe the issue...&#10;&#10;e.g. 'Server is completely down ASAP!'&#10;     'My invoice was charged twice'&#10;     'Need legal review of contract'"></textarea>
+      <div class="form-row">
+        <button class="btn-primary" onclick="submitTicket()">▶ Submit Ticket</button>
+        <button class="btn-secondary" onclick="submitRandom()">⚡ Random Ticket</button>
+      </div>
+      <div class="form-row">
+        <button class="btn-secondary" onclick="checkHealth()">♥ Health Check</button>
+        <button class="btn-danger" onclick="submitStorm()">🌊 Trigger Storm</button>
+      </div>
+    </div>
+    <div class="response-box" id="response-box"></div>
+
+    <!-- Circuit Breaker Section -->
+    <div class="panel-header" style="margin-top:auto">
+      Circuit Breaker
+      <span class="tag">auto</span>
+    </div>
+    <div class="circuit-panel">
+      <div class="circuit-indicator closed" id="circuit-indicator">
+        <div class="dot green" id="circuit-dot-big" style="width:10px;height:10px"></div>
+        <div class="circuit-label">
+          <strong id="circuit-state-text">CLOSED</strong>
+          <small id="circuit-desc">ML model operating normally</small>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);line-height:1.7;padding:0 2px">
+        Opens after <span style="color:var(--amber)">3 slow calls</span> &gt; 500ms → falls back to TF-IDF<br/>
+        Closes after <span style="color:var(--green)">5 fast calls</span> &lt; 200ms → restores Transformer
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Live Ticket Feed -->
+  <div class="panel">
+    <div class="panel-header">
+      Live Ticket Feed
+      <span class="tag" id="ticket-count">0 processed</span>
+    </div>
+    <div class="ticket-log" id="ticket-log">
+      <div class="empty">No tickets yet — submit one to get started</div>
+    </div>
+  </div>
+
+  <!-- Bottom Row -->
+  <div class="bottom-row">
+
+    <!-- Agent Registry -->
+    <div class="panel">
+      <div class="panel-header">
+        Agent Registry
+        <span class="tag">skill-based routing</span>
+      </div>
+      <div class="agent-grid" id="agent-grid">
+        <!-- Agents rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    <div class="panel">
+      <div class="panel-header">
+        Category Breakdown
+        <span class="tag">this session</span>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px">
+            <span style="color:var(--amber)">Technical</span>
+            <span id="pct-technical">0%</span>
+          </div>
+          <div style="height:4px;background:var(--border);border-radius:2px">
+            <div id="bar-technical" style="height:100%;background:var(--amber);border-radius:2px;width:0%;transition:width 0.5s"></div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px">
+            <span style="color:var(--blue)">Billing</span>
+            <span id="pct-billing">0%</span>
+          </div>
+          <div style="height:4px;background:var(--border);border-radius:2px">
+            <div id="bar-billing" style="height:100%;background:var(--blue);border-radius:2px;width:0%;transition:width 0.5s"></div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px">
+            <span style="color:var(--red)">Legal</span>
+            <span id="pct-legal">0%</span>
+          </div>
+          <div style="height:4px;background:var(--border);border-radius:2px">
+            <div id="bar-legal" style="height:100%;background:var(--red);border-radius:2px;width:0%;transition:width 0.5s"></div>
+          </div>
+        </div>
+        <div style="margin-top:8px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px">
+            <span style="color:#ff6b35">🌊 Storms</span>
+            <span id="pct-storms">0 incidents</span>
+          </div>
+        </div>
+
+        <!-- Recent webhook log -->
+        <div style="margin-top:8px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Webhook Alerts</div>
+          <div id="webhook-log" style="font-size:11px;color:var(--text-dim);line-height:1.8">
+            No webhooks fired yet
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+const state = {
+  submitted: 0,
+  processed: 0,
+  storms: 0,
+  webhooks: 0,
+  categories: { Technical: 0, Billing: 0, Legal: 0 },
+  tickets: [],
+  webhookLog: [],
+};
+
+const AGENTS = [
+  { id: 'agent-1', name: 'Agent Alpha', skills: { Tech: 90, Billing: 10 }, load: 0, cap: 5 },
+  { id: 'agent-2', name: 'Agent Beta',  skills: { Billing: 80, Legal: 20 }, load: 0, cap: 5 },
+  { id: 'agent-3', name: 'Agent Gamma', skills: { Legal: 70, Tech: 30 }, load: 0, cap: 5 },
+  { id: 'agent-4', name: 'Agent Delta', skills: { Tech: 60, Billing: 40 }, load: 0, cap: 5 },
+  { id: 'agent-5', name: 'Agent Omega', skills: { Billing: 50, Legal: 50 }, load: 0, cap: 5 },
+];
+
+const RANDOM_TICKETS = [
+  "Server is completely down ASAP! Nothing is working!",
+  "My invoice was charged twice this month, need refund",
+  "We need urgent legal review of our enterprise contract",
+  "Cannot login to my account since yesterday morning",
+  "Billing portal is broken and I cannot make payment",
+  "Database keeps crashing every 10 minutes critical issue",
+  "CRITICAL production outage all customers affected immediately",
+  "Payment failed three times please help urgently",
+  "Legal advice needed on data privacy compliance",
+  "API returning 500 errors for all requests fix now",
+];
+
+// ── Clock ────────────────────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Render Agents ────────────────────────────────────────────────────────────
+function renderAgents() {
+  const grid = document.getElementById('agent-grid');
+  grid.innerHTML = AGENTS.map(a => {
+    const skillStr = Object.entries(a.skills)
+      .map(([k,v]) => `${k}: ${v}%`).join(' · ');
+    const loadPct = Math.round((a.load / a.cap) * 100);
+    return `
+      <div class="agent-card">
+        <div class="agent-name">${a.name}</div>
+        <div class="agent-skills">${skillStr}</div>
+        <div class="agent-load">
+          <div class="agent-load-fill" style="width:${loadPct}%"></div>
+        </div>
+        <div style="font-size:9px;color:var(--text-dim);margin-top:4px">${a.load}/${a.cap} tickets</div>
+      </div>`;
+  }).join('');
+}
+renderAgents();
+
+// ── Show Response ─────────────────────────────────────────────────────────────
+function showResponse(msg, type='success') {
+  const box = document.getElementById('response-box');
+  box.textContent = msg;
+  box.className = `response-box show ${type}`;
+  setTimeout(() => box.className = 'response-box', 4000);
+}
+
+// ── Add Ticket to Feed ────────────────────────────────────────────────────────
+function addTicketToFeed(ticket) {
+  const log = document.getElementById('ticket-log');
+  const empty = log.querySelector('.empty');
+  if (empty) empty.remove();
+
+  const cat = ticket.category || 'Technical';
+  const urgency = ticket.urgency_score || 0;
+  const isStorm = ticket.is_duplicate;
+  const color = urgency > 0.8 ? '#ff4757' : urgency > 0.5 ? '#f5a623' : '#00ff88';
+  const badgeClass = isStorm ? 'badge-storm' :
+    cat === 'Billing' ? 'badge-billing' :
+    cat === 'Legal' ? 'badge-legal' : 'badge-technical';
+  const badgeLabel = isStorm ? '🌊 STORM' : cat;
+
+  const now = new Date().toLocaleTimeString();
+  const item = document.createElement('div');
+  item.className = 'ticket-item';
+  item.innerHTML = `
+    <div>
+      <div class="ticket-text">${ticket.text || ''}</div>
+      <div class="ticket-meta">
+        <span>${ticket.id ? ticket.id.slice(0,8) : '?'}</span>
+        <span>→ ${ticket.assigned_agent || 'routing...'}</span>
+        ${ticket.urgency_score !== undefined ? `<span style="color:${color}">urgency: ${urgency.toFixed(2)}</span>` : ''}
+      </div>
+      <div class="urgency-bar">
+        <div class="urgency-fill" style="width:${urgency*100}%;background:${color}"></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <span class="badge ${badgeClass}">${badgeLabel}</span>
+      <span class="time-tag">${now}</span>
+    </div>`;
+
+  log.insertBefore(item, log.firstChild);
+
+  // Keep max 50 items
+  while (log.children.length > 50) log.removeChild(log.lastChild);
+
+  // Update stats
+  state.processed++;
+  document.getElementById('ticket-count').textContent = `${state.processed} processed`;
+
+  if (!isStorm && cat) {
+    state.categories[cat] = (state.categories[cat] || 0) + 1;
+    updateCategoryBars();
+  }
+
+  if (isStorm) {
+    state.storms++;
+    document.getElementById('stat-storms').textContent = state.storms;
+    document.getElementById('pct-storms').textContent = `${state.storms} incidents`;
+  }
+
+  if (urgency > 0.8 && !isStorm) {
+    state.webhooks++;
+    document.getElementById('stat-webhooks').textContent = state.webhooks;
+    addWebhookLog(ticket, urgency, now);
+  }
+
+  // Simulate agent load
+  const randomAgent = AGENTS[Math.floor(Math.random() * AGENTS.length)];
+  randomAgent.load = Math.min(randomAgent.load + 1, randomAgent.cap);
+  setTimeout(() => { randomAgent.load = Math.max(0, randomAgent.load - 1); renderAgents(); }, 5000);
+  renderAgents();
+}
+
+function addWebhookLog(ticket, urgency, time) {
+  const log = document.getElementById('webhook-log');
+  if (log.textContent === 'No webhooks fired yet') log.textContent = '';
+  const entry = document.createElement('div');
+  entry.style.cssText = 'color:#4ecdc4;animation:slideIn 0.3s ease';
+  entry.textContent = `${time} → urgency ${urgency.toFixed(2)} → Discord ✓`;
+  log.insertBefore(entry, log.firstChild);
+  if (log.children.length > 5) log.removeChild(log.lastChild);
+}
+
+function updateCategoryBars() {
+  const total = Object.values(state.categories).reduce((a,b) => a+b, 0);
+  if (!total) return;
+  ['Technical', 'Billing', 'Legal'].forEach(cat => {
+    const pct = Math.round((state.categories[cat] / total) * 100);
+    document.getElementById(`pct-${cat.toLowerCase()}`).textContent = `${pct}%`;
+    document.getElementById(`bar-${cat.toLowerCase()}`).style.width = `${pct}%`;
+  });
+}
+
+// ── Health Poll ───────────────────────────────────────────────────────────────
+async function pollHealth() {
+  try {
+    const r = await fetch('/health');
+    const data = await r.json();
+
+    // API dot
+    document.getElementById('api-dot').className = 'dot green';
+    document.getElementById('api-status').textContent = 'api online';
+
+    // Queue
+    document.getElementById('stat-queue').textContent = data.queue_depth || 0;
+    const qDepth = data.queue_depth || 0;
+    document.getElementById('worker-dot').className = qDepth > 0 ? 'dot amber' : 'dot green';
+    document.getElementById('worker-status').textContent = qDepth > 0 ? `${qDepth} queued` : 'worker idle';
+
+    // Circuit breaker
+    const isOpen = data.circuit_breaker === 'open';
+    document.getElementById('stat-circuit').textContent = isOpen ? 'OPEN' : 'CLOSED';
+    document.getElementById('stat-circuit').className = `stat-value ${isOpen ? 'red' : 'green'}`;
+    document.getElementById('cb-dot').className = `dot ${isOpen ? 'red' : 'green'}`;
+    document.getElementById('cb-status').textContent = isOpen ? 'fallback active' : 'circuit closed';
+    document.getElementById('circuit-indicator').className = `circuit-indicator ${isOpen ? 'open' : 'closed'}`;
+    document.getElementById('circuit-dot-big').className = `dot ${isOpen ? 'red' : 'green'}`;
+    document.getElementById('circuit-dot-big').style.cssText = `width:10px;height:10px;background:${isOpen ? 'var(--red)' : 'var(--green)'}`;
+    document.getElementById('circuit-state-text').textContent = isOpen ? 'OPEN' : 'CLOSED';
+    document.getElementById('circuit-desc').textContent = isOpen
+      ? 'Using TF-IDF fallback model (latency exceeded 500ms)'
+      : 'Transformer model operating normally';
+
+  } catch (e) {
+    document.getElementById('api-dot').className = 'dot red';
+    document.getElementById('api-status').textContent = 'api offline';
+  }
+}
+
+setInterval(pollHealth, 2000);
+pollHealth();
+
+// ── Submit Ticket ─────────────────────────────────────────────────────────────
+async function submitTicket() {
+  const text = document.getElementById('ticket-text').value.trim();
+  if (!text) { showResponse('⚠ Please enter ticket text', 'error'); return; }
+
+  const btn = document.querySelector('.btn-primary');
+  btn.classList.add('sending');
+  btn.textContent = '⏳ Sending...';
+
+  try {
+    const r = await fetch('/ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await r.json();
+
+    state.submitted++;
+    document.getElementById('stat-submitted').textContent = state.submitted;
+    document.getElementById('ticket-text').value = '';
+
+    if (r.status === 202) {
+      showResponse(`✓ Accepted — ticket ${data.ticket_id.slice(0,8)} queued for processing`, 'success');
+      // Poll for the processed result
+      setTimeout(() => pollRecentTickets(), 3000);
+    } else {
+      addTicketToFeed({ ...data, text });
+      showResponse(`✓ Processed — category: ${data.category}, urgency: ${(data.urgency_score||0).toFixed(2)}`, 'success');
+    }
+  } catch(e) {
+    showResponse('✗ Failed to connect to API', 'error');
+  } finally {
+    btn.classList.remove('sending');
+    btn.textContent = '▶ Submit Ticket';
+  }
+}
+
+async function submitRandom() {
+  const text = RANDOM_TICKETS[Math.floor(Math.random() * RANDOM_TICKETS.length)];
+  document.getElementById('ticket-text').value = text;
+  await submitTicket();
+}
+
+// ── Health Check ──────────────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const r = await fetch('/health');
+    const d = await r.json();
+    showResponse(`♥ API OK — queue: ${d.queue_depth}, circuit: ${d.circuit_breaker}`, 'success');
+  } catch(e) {
+    showResponse('✗ API unreachable', 'error');
+  }
+}
+
+// ── Storm Simulation ──────────────────────────────────────────────────────────
+async function submitStorm() {
+  const stormTickets = [
+    "Server is completely down", "Server is totally down",
+    "The server is down and not working", "Server down nothing works",
+    "Everything is down server unreachable", "Server is not responding at all",
+    "Server has been down since an hour", "Our server is down please fix",
+    "Server completely unreachable", "Nothing is working server is down",
+    "Server down ASAP please help",
+  ];
+
+  showResponse('🌊 Firing 11 storm tickets simultaneously...', 'success');
+
+  const promises = stormTickets.map((text, i) =>
+    fetch('/ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: `storm-${i}-${Date.now()}`, text })
+    })
+  );
+
+  state.submitted += 11;
+  document.getElementById('stat-submitted').textContent = state.submitted;
+
+  await Promise.all(promises);
+  showResponse('🌊 Storm triggered — watch for Master Incident in feed', 'success');
+
+  // Add storm entry to feed after worker processes
+  setTimeout(() => {
+    addTicketToFeed({
+      id: `storm-master-${Date.now()}`,
+      text: '11 near-identical tickets detected and suppressed',
+      category: 'Technical',
+      urgency_score: 0.95,
+      is_duplicate: true,
+      assigned_agent: 'master-incident',
+    });
+  }, 2000);
+
+  setTimeout(() => pollRecentTickets(), 4000);
+}
+
+// ── Poll Recent Tickets from API ──────────────────────────────────────────────
+async function pollRecentTickets() {
+  try {
+    const r = await fetch('/tickets/recent');
+    if (!r.ok) return;
+    const tickets = await r.json();
+    // Only show new ones
+    tickets.forEach(t => {
+      if (!state.tickets.find(s => s.id === t.id)) {
+        state.tickets.push(t);
+        addTicketToFeed(t);
+      }
+    });
+  } catch(e) { /* endpoint might not exist yet */ }
+}
+
+// Poll recent tickets every 3 seconds
+setInterval(pollRecentTickets, 3000);
+
+// Enter key submits
+document.getElementById('ticket-text').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.ctrlKey) submitTicket();
+});
+</script>
+</body>
+</html>
