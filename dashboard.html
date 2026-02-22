@@ -492,7 +492,7 @@
         <button class="btn-danger" onclick="submitStorm()">🌊 Trigger Storm</button>
       </div>
     </div>
-    <div class="response-box" id="response-box"></div>
+    <div class="response-box" id="response-box" aria-live="polite"></div>
 
     <!-- Circuit Breaker Section -->
     <div class="panel-header" style="margin-top:auto">
@@ -904,6 +904,7 @@ async function pollRecentTickets() {
 setInterval(pollRecentTickets, 3000);
 
 // Enter key submits
+// Allow Ctrl+Enter for quick ticket submission (keyboard UX improvement)
 document.getElementById('ticket-text').addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.ctrlKey) submitTicket();
 });
