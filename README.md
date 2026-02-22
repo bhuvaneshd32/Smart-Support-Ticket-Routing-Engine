@@ -283,18 +283,3 @@ SMART-SUPPORT-TICKET-ROUTING-ENGINE/
 * Pytest-asyncio
 
 ---
-
-# Capabilities Delivered
-
-* Asynchronous ticket ingestion
-* Transformer-based NLP classification
-* Continuous urgency scoring
-* Skill-based agent routing optimization
-* Semantic duplicate suppression
-* Circuit breaker failover mechanism
-* Horizontal worker scalability
-* Dockerized deployment
-* Config-driven system tuning
-* Fully tested modular architecture
-
----
