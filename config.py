@@ -11,7 +11,7 @@ REDIS_LOCK_TTL_SECONDS: int = 30           # SETNX lock expiry
 
 # ── API ───────────────────────────────────────────────────────────────────────
 API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
-API_PORT: int = int(os.getenv("API_PORT", "8000"))
+API_PORT: int = int(os.getenv("API_PORT", "7860"))
 
 # ── Webhook ───────────────────────────────────────────────────────────────────
 WEBHOOK_URL: str | None = os.getenv("WEBHOOK_URL")          # Slack/Discord
