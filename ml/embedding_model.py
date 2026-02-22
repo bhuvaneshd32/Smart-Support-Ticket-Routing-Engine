@@ -18,4 +18,4 @@ def get_embedding(text: str) -> list:
     with torch.no_grad():
         embedding = _embedding_model.encode(text)
 
-    return embedding.tolist()
+    return list(embedding)
