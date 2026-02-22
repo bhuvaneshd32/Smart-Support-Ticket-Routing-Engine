@@ -5,7 +5,7 @@
 import os
 
 # ── Redis ─────────────────────────────────────────────────────────────────────
-REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
+REDIS_URL: str = os.getenv("REDIS_URL", "redis://redis:6379")
 REDIS_QUEUE_KEY: str = "tickets_queue"
 REDIS_LOCK_TTL_SECONDS: int = 30           # SETNX lock expiry
 
