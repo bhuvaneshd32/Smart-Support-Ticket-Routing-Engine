@@ -228,19 +228,33 @@ SMART-SUPPORT-TICKET-ROUTING-ENGINE/
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
+├── README.md
+├── .env
+├── stubs.py
+├── test_full_system.py
+│
+├── data/
+│   └── training_samples.py
 │
 ├── ml/
+│   ├── __init__.py
 │   ├── baseline_model.py
 │   ├── transformer_model.py
 │   ├── embedding_model.py
 │   └── storm_detection.py
 │
-├── tests/
-│   ├── test_ml.py
-│   ├── test_api.py
-│   └── test_router.py
+├── utils/
+│   ├── __init__.py
+│   └── latency.py
 │
-└── test_full_system.py
+└── tests/
+    ├── __init__.py
+    ├── conftest.py
+    ├── test_api.py
+    ├── test_ml.py
+    ├── test_router.py
+    └── test_run_router.py
+
 ```
 
 ---
@@ -282,3 +296,5 @@ SMART-SUPPORT-TICKET-ROUTING-ENGINE/
 * Dockerized deployment
 * Config-driven system tuning
 * Fully tested modular architecture
+
+---
