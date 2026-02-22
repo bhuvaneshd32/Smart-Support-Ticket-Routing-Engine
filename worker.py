@@ -92,17 +92,19 @@ def _update_circuit_breaker(latency_ms: float) -> None:
         _consecutive_fast_calls = 0
 
 # ── Webhook Helper ────────────────────────────────────────────────────────────
+DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1475144580692447244/EWlitNhR06fGJFRIXuafmbUgQmcO4vRXIhJEinZK-jMTVmbTgBv9nUEq15I9kXPvM3Hl"
 
 async def _fire_webhook(payload: dict) -> None:
-    """POST a JSON payload to Slack/Discord webhook."""
-    if not WEBHOOK_URL:
-        return
     try:
+        discord_payload = {
+            "content": payload.get("text", ""),
+            "username": "SmartSupport Bot",
+        }
         async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.post(WEBHOOK_URL, json=payload)
+            resp = await client.post(DISCORD_WEBHOOK, json=discord_payload)
             print(f"📣  Webhook fired → HTTP {resp.status_code}")
     except Exception as e:
-        print(f"⚠️  Webhook failed: {e}")
+        print(f"⚠️  Webhook delivery failed: {e}")
 
 # ── Storm batch storage (Phase 3) ─────────────────────────────────────────────
 
