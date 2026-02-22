@@ -90,14 +90,14 @@ To prevent alert flooding during outages, the system performs semantic deduplica
 
 ### Cosine Similarity Formula
 
-\[
-\text{similarity} = \frac{A \cdot B}{\|A\| \|B\|}
-\]
-
+similarity = (A · B) / (||A|| × ||B||)
 Where:
 
-- \( A \cdot B \) is the dot product between two embedding vectors  
-- \( \|A\| \) and \( \|B\| \) are their vector magnitudes  
+A · B → Dot product of the two embedding vectors
+
+||A|| → Magnitude (L2 norm) of vector A
+
+||B|| → Magnitude (L2 norm) of vector B 
 
 ### Storm Condition
 
@@ -284,3 +284,4 @@ SMART-SUPPORT-TICKET-ROUTING-ENGINE/
 * Fully tested modular architecture
 
 ```
+
