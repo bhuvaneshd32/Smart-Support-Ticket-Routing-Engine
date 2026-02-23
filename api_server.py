@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     global _redis_client
     if REDIS_AVAILABLE:
         try:
-            _redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
+            _redis_client = aioredis.from_url(REDIS_URL, decode_responses=True, ssl_cert_reqs=None)
             await _redis_client.ping()
             # ── Clear stale tickets from previous session ──────────────────
             await _redis_client.delete(RECENT_TICKETS_KEY)

@@ -185,7 +185,7 @@ async def _process_ticket(raw: str, redis: aioredis.Redis) -> None:
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
 async def run_worker() -> None:
-    redis = aioredis.from_url(REDIS_URL, decode_responses=True)
+    redis = aioredis.from_url(REDIS_URL, decode_responses=True, ssl_cert_reqs=None)
     print(f"👷 Worker started — listening on {REDIS_QUEUE_KEY}")
     while True:
         try:
